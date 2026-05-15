@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AC 電流與電力計算器 (統計優化版)</title>
+    <title>AC 電流與電力計算器</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
         .calc-card, .history-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 25px; min-width: 320px; box-sizing: border-box; }
@@ -26,11 +26,14 @@
         .btn-save { width: 100%; padding: 10px; background-color: #1a73e8; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
         .btn-save:hover { background-color: #1557b0; }
         
-        /* 表格與右上角按鈕控制 */
         .card-header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; margin-bottom: 10px; }
         .card-header-container h2 { border-bottom: none; margin: 0; padding-bottom: 0; }
-        .btn-export { padding: 6px 14px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; border: 1px solid #107c41; background-color: #107c41; color: #fff; display: flex; align-items: center; gap: 4px; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn-export, .btn-import { padding: 6px 14px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; border: 1px solid #dadce0; }
+        .btn-export { background-color: #107c41; color: #fff; border-color: #107c41; }
         .btn-export:hover { background-color: #0a5c30; }
+        .btn-import { background-color: #fff; color: #3c4043; }
+        .btn-import:hover { background-color: #f1f3f4; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px; background: #fff; }
         th, td { border: 1px solid #dadce0; padding: 8px; text-align: center; }
@@ -39,7 +42,6 @@
         tr.draggable:hover { background-color: #f1f3f4; }
         tr.dragging { opacity: 0.5; background-color: #e8f0fe; }
         
-        /* 總計列樣式 */
         tr.total-row { background-color: #f8f9fa; font-weight: bold; border-top: 2px solid #1a73e8; }
         tr.total-row td { color: #1a73e8; }
         
@@ -53,7 +55,6 @@
 </head>
 <body>
 
-<!-- 左側：計算器主體 -->
 <div class="calc-card">
     <h2>AC 電流與電力計算器</h2>
     
@@ -116,11 +117,14 @@
     <button class="btn-save" onclick="saveToTable()">💾 儲存結果至表格</button>
 </div>
 
-<!-- 右側：紀錄表格 -->
 <div class="history-card">
     <div class="card-header-container">
         <h2>數據紀錄歷史</h2>
-        <button class="btn-export" onclick="exportToExcel()">📊 Excel 導出</button>
+        <div class="btn-group">
+            <button class="btn-import" onclick="document.getElementById('importFile').click()">📂 導入 CSV</button>
+            <input type="file" id="importFile" style="display:none" accept=".csv" onchange="importFromCSV(this)">
+            <button class="btn-export" onclick="exportToExcel()">📊 Excel 導出</button>
+        </div>
     </div>
     <div class="hint">💡 提示：點擊「名稱」或「備註」可改字。按住數據列可拖曳換位。</div>
     <table>
@@ -138,9 +142,7 @@
                 <th>操作</th>
             </tr>
         </thead>
-        <tbody id="history-tbody">
-            <!-- 數據列由 JS 動態插入 -->
-        </tbody>
+        <tbody id="history-tbody"></tbody>
         <tfoot>
             <tr class="total-row">
                 <td>總計</td>
@@ -172,7 +174,6 @@ function toggleInputs() {
 }
 
 function changeDefaultVolt() {
-    // 切換到三相時，通常業界常用 380V，自動幫忙微調優化體驗，仍可手動改
     document.getElementById('volt').value = "380";
     calculate();
 }
@@ -183,7 +184,6 @@ function calculate() {
     const phase = parseInt(phaseVal);
     const V = parseFloat(document.getElementById('volt').value) || 0;
     const PF = parseFloat(document.getElementById('pf').value) || 1;
-    
     let A = 0, kW = 0, kVA = 0;
     const factor = phase === 3 ? Math.sqrt(3) : 1;
 
@@ -203,17 +203,12 @@ function calculate() {
         kVA = (V * A * factor) / 1000;
     }
 
-    let safA = A * 1.25;
-    let safkW = kW * 1.25;
-    let safkVA = kVA * 1.25;
-
     document.getElementById('res-amp').innerText = A.toFixed(2) + ' A';
     document.getElementById('res-kw').innerText = kW.toFixed(2) + ' kW';
     document.getElementById('res-kva').innerText = kVA.toFixed(2) + ' kVA';
-
-    document.getElementById('saf-amp').innerText = safA.toFixed(2) + ' A';
-    document.getElementById('saf-kw').innerText = safkW.toFixed(2) + ' kW';
-    document.getElementById('saf-kva').innerText = safkVA.toFixed(2) + ' kVA';
+    document.getElementById('saf-amp').innerText = (A * 1.25).toFixed(2) + ' A';
+    document.getElementById('saf-kw').innerText = (kW * 1.25).toFixed(2) + ' kW';
+    document.getElementById('saf-kva').innerText = (kVA * 1.25).toFixed(2) + ' kVA';
 
     currentData = {
         phase: phaseVal === '1' ? '單相(1Φ)' : '三相(3Φ)',
@@ -222,95 +217,73 @@ function calculate() {
         a: A.toFixed(2),
         kw: kW.toFixed(2),
         kva: kVA.toFixed(2),
-        safA: safA.toFixed(2)
+        safA: (A * 1.25).toFixed(2)
     };
 }
 
 function saveToTable() {
     const tbody = document.getElementById('history-tbody');
+    const tr = createRowElement(`設備${deviceCounter}`, currentData.phase, currentData.v, currentData.pf, currentData.a, currentData.kw, currentData.kva, currentData.safA, "");
+    tbody.appendChild(tr);
+    deviceCounter++;
+    updateTableTotals();
+}
+
+function createRowElement(name, phase, v, pf, a, kw, kva, safa, note) {
     const tr = document.createElement('tr');
     tr.className = 'draggable';
     tr.draggable = true;
-    
-    // 網頁畫面上保留單位利於人類直覺閱讀
     tr.innerHTML = `
-        <td contenteditable="true" class="editable-cell">設備${deviceCounter}</td>
-        <td>${currentData.phase}</td>
-        <td>${currentData.v}</td>
-        <td>${currentData.pf}</td>
-        <td class="num-a">${currentData.a} A</td>
-        <td class="num-kw">${currentData.kw} kW</td>
-        <td class="num-kva">${currentData.kva} kVA</td>
-        <td class="num-safa" style="font-weight:bold; color:#b06000;">${currentData.safA} A</td>
-        <td contenteditable="true" class="editable-cell"></td>
+        <td contenteditable="true" class="editable-cell">${name}</td>
+        <td>${phase}</td>
+        <td>${v}</td>
+        <td>${pf}</td>
+        <td class="num-a">${a} A</td>
+        <td class="num-kw">${kw} kW</td>
+        <td class="num-kva">${kva} kVA</td>
+        <td class="num-safa" style="font-weight:bold; color:#b06000;">${safa} A</td>
+        <td contenteditable="true" class="editable-cell">${note}</td>
         <td><button class="btn-del" onclick="deleteRow(this)">刪除</button></td>
     `;
-    
     addDragEvents(tr);
-    tbody.appendChild(tr);
-    deviceCounter++;
-    
-    updateTableTotals(); // 新增後自動刷新總計
+    return tr;
 }
 
 function deleteRow(btn) {
-    const row = btn.parentNode.parentNode;
-    row.parentNode.removeChild(row);
-    updateTableTotals(); // 刪除後自動刷新總計
+    btn.closest('tr').remove();
+    updateTableTotals();
 }
 
-// 核心計算：即時統計所有欄位加總
 function updateTableTotals() {
-    let totalkW = 0;
-    let totalkVA = 0;
-    let totalSafA = 0;
-
-    // 抓取網頁上目前存在的所有行進行純粹數字解析加總
+    let totalkW = 0, totalkVA = 0, totalSafA = 0;
     document.querySelectorAll('#history-tbody tr').forEach(row => {
-        const kwText = row.querySelector('.num-kw').innerText;
-        const kvaText = row.querySelector('.num-kva').innerText;
-        const safaText = row.querySelector('.num-safa').innerText;
-
-        totalkW += parseFloat(kwText) || 0;
-        totalkVA += parseFloat(kvaText) || 0;
-        totalSafA += parseFloat(safaText) || 0;
+        totalkW += parseFloat(row.querySelector('.num-kw').innerText) || 0;
+        totalkVA += parseFloat(row.querySelector('.num-kva').innerText) || 0;
+        totalSafA += parseFloat(row.querySelector('.num-safa').innerText) || 0;
     });
-
-    // 渲染至底部的總計區域
     document.getElementById('total-kw').innerText = totalkW.toFixed(2) + ' kW';
     document.getElementById('total-kva').innerText = totalkVA.toFixed(2) + ' kVA';
     document.getElementById('total-safa').innerText = totalSafA.toFixed(2) + ' A';
 }
 
-// 核心導出：自動過濾設備列內部的英文後綴（A/kW/kVA）
 function exportToExcel() {
     const table = document.querySelector(".history-card table");
-    let csvContent = "\uFEFF"; // 強制 UTF-8 BOM 防止 Excel 亂碼
-    
-    // 巡檢 table 內所有的 tr (含 header、body、footer)
+    let csvContent = "\uFEFF"; 
     const rows = table.querySelectorAll("tr");
-    
     rows.forEach(row => {
         let rowData = [];
         const cells = row.querySelectorAll("th, td");
-        
-        // 排除最後一欄（操作/刪除按鈕）
         for (let i = 0; i < cells.length - 1; i++) {
             let text = cells[i].innerText.replace(/[\n\r]/g, '').trim();
-            
-            // 如果是資料列或總計列，將內部包含的單位字母剔除（除了首排標題保留做為指引）
+            // 核心修正：導出時強力剔除 A, kW, kVA, kV 等所有字母單位
             if (!row.parentNode.matches('thead')) {
-                text = text.replace(/\s?A/g, '')
-                           .replace(/\s?kW/g, '')
-                           .replace(/\s?kVA/g, '');
+                text = text.replace(/[a-zA-Z]/g, '').trim();
             }
-            
             if (text.includes(',')) text = `"${text}"`;
             rowData.push(text);
         }
         csvContent += rowData.join(",") + "\r\n";
     });
-    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -318,38 +291,58 @@ function exportToExcel() {
     link.click();
 }
 
-// 拖曳邏輯連動總計
+function importFromCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const lines = e.target.result.replace(/^\uFEFF/, '').split(/\r?\n/);
+        const tbody = document.getElementById('history-tbody');
+        lines.forEach((line, index) => {
+            if (index === 0 || !line.trim()) return;
+            const cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+            const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+            if (cleanCols[0] === "總計") return;
+            
+            // 導入時確保數據列為純數字，防止殘留字母單位
+            const name = cleanCols[0];
+            const phase = cleanCols[1];
+            const v = cleanCols[2].replace(/[a-zA-Z]/g, '');
+            const pf = cleanCols[3];
+            const a = cleanCols[4].replace(/[a-zA-Z]/g, '');
+            const kw = cleanCols[5].replace(/[a-zA-Z]/g, '');
+            const kva = cleanCols[6].replace(/[a-zA-Z]/g, '');
+            const safa = cleanCols[7].replace(/[a-zA-Z]/g, '');
+            const note = cleanCols[8] || "";
+
+            tbody.appendChild(createRowElement(name, phase, v, pf, a, kw, kva, safa, note));
+            deviceCounter++;
+        });
+        updateTableTotals();
+        input.value = '';
+        alert('導入完成');
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
 let dragSrcEl = null;
 function addDragEvents(el) {
     el.addEventListener('dragstart', function(e) {
-        if (document.activeElement && document.activeElement.classList.contains('editable-cell')) {
-            e.preventDefault();
-            return;
-        }
+        if (document.activeElement.classList.contains('editable-cell')) { e.preventDefault(); return; }
         dragSrcEl = this;
         this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
     });
-    el.addEventListener('dragover', function(e) { if (e.preventDefault) e.preventDefault(); return false; });
-    el.addEventListener('dragenter', function(e) {
+    el.addEventListener('dragover', function(e) { e.preventDefault(); });
+    el.addEventListener('dragenter', function() {
         if (this !== dragSrcEl && dragSrcEl !== null) {
-            const tbody = this.parentNode;
-            const children = Array.from(tbody.children);
-            const currentIndex = children.indexOf(dragSrcEl);
-            const targetIndex = children.indexOf(this);
-            if (currentIndex < targetIndex) { tbody.insertBefore(dragSrcEl, this.nextSibling); } 
-            else { tbody.insertBefore(dragSrcEl, this); }
+            const children = Array.from(this.parentNode.children);
+            if (children.indexOf(dragSrcEl) < children.indexOf(this)) { this.after(dragSrcEl); } 
+            else { this.before(dragSrcEl); }
         }
     });
-    el.addEventListener('dragend', function() { 
-        this.classList.remove('dragging'); 
-        dragSrcEl = null; 
-        updateTableTotals(); // 拖曳定位完成後重新核對數值安全性
-    });
+    el.addEventListener('dragend', function() { this.classList.remove('dragging'); dragSrcEl = null; updateTableTotals(); });
 }
-
 toggleInputs();
 </script>
-
 </body>
 </html>
