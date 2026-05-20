@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空調水管 LPM 與管徑 </title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .main-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; width: 100%; max-width: 1250px; margin-top: 10px; }
+        
+        .card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 25px; box-sizing: border-box; }
+        .left-card { flex: 1.2; min-width: 450px; }
+        .right-card { flex: 0.8; min-width: 380px; display: flex; flex-direction: column; gap: 20px; }
+        
+        h2 { margin: 0 0 15px 0; color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; font-size: 1.3em; }
+        h3 { margin: 0 0 10px 0; color: #3c4043; font-size: 1.1em; }
+        
+        /* 表格樣式 */
+        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 15px; }
+        th, td { border: 1px solid #dadce0; padding: 10px; text-align: center; }
+        th { background: #f8f9fa; color: #5f6368; }
+        .btn-add { background: #107c41; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-add:hover { background: #0a5c30; }
+        .btn-del { background: #d93025; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        
+        input[type="number"] { width: 80px; padding: 6px; border: 1px solid #dadce0; border-radius: 4px; text-align: center; }
+        
+        /* 結果區塊 */
+        .total-box { background: #e8f0fe; border-left: 5px solid #1a73e8; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; color: #1967d2; display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .result-box { background: #f8f9fa; border: 1px solid #dadce0; border-radius: 8px; padding: 15px; }
+        .result-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 15px; }
+        .result-row:last-child { border-bottom: none; }
+        .res-val { font-weight: bold; color: #202124; }
+        .highlight { color: #d93025; font-size: 1.1em; }
+        
+        /* 動畫畫布區塊 */
+        .animation-container { background: #202124; border-radius: 8px; padding: 15px; text-align: center; color: white; }
+        canvas { background: #121214; border-radius: 6px; width: 100%; height: 150px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .anim-info { font-size: 12px; color: #9aa0a6; margin-top: 8px; text-align: left; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<div style="width: 100%; max-width: 1250px; padding: 0 20px;">
+    <h1 style="color: #1a73e8; margin-bottom: 5px;">空調水管 LPM 與管徑</h1>
+    <p style="margin: 0 0 20px 0; color: #5f6368; font-size: 14px;">設計基準：摩擦損失係數 60 mmAq/m </p>
+</div>
+
+<div class="main-container">
+    <div class="card left-card">
+        <h2>設備流量參數設定</h2>
+        <button class="btn-add" onclick="addRow()">＋ 新增設備參數</button>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>設備描述</th>
+                    <th>數量 (台)</th>
+                    <th>單台流量 (LPM)</th>
+                    <th>小計 (LPM)</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="device-tbody">
+                <tr>
+                    <td><input type="text" value="設備A" style="width:110px; padding:6px; border:1px solid #dadce0; border-radius:4px;"></td>
+                    <td><input type="number" class="input-qty" value="3" min="0" oninput="updateCalculation()"></td>
+                    <td><input type="number" class="input-lpm" value="9" min="0" oninput="updateCalculation()"></td>
+                    <td class="row-subtotal">27.00</td>
+                    <td><button class="btn-del" onclick="delRow(this)">刪除</button></td>
+                </tr>
+                <tr>
+                    <td><input type="text" value="設備B" style="width:110px; padding:6px; border:1px solid #dadce0; border-radius:4px;"></td>
+                    <td><input type="number" class="input-qty" value="2" min="0" oninput="updateCalculation()"></td>
+                    <td><input type="number" class="input-lpm" value="36" min="0" oninput="updateCalculation()"></td>
+                    <td class="row-subtotal">72.00</td>
+                    <td><button class="btn-del" onclick="delRow(this)">刪除</button></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="total-box">
+            <span>總計水流量：</span>
+            <span id="total-lpm-display">99.00 LPM</span>
+        </div>
+    </div>
+
+    <div class="card right-card">
+        <div>
+            <h2>管徑推薦結果</h2>
+            <div class="result-box">
+                <div class="result-row">
+                    <span>推薦公稱管徑 (A)：</span>
+                    <span class="res-val highlight" id="res-dia-a">-</span>
+                </div>
+                <div class="result-row">
+                    <span>推薦英吋管徑 (B)：</span>
+                    <span class="res-val highlight" id="res-dia-b">-</span>
+                </div>
+                <div class="result-row">
+                    <span>計算實際流速：</span>
+                    <span class="res-val" id="res-velocity" style="color:#107c41;">-</span>
+                </div>
+                <div class="result-row">
+                    <span>該管徑流量上限：</span>
+                    <span class="res-val" id="res-max-limit">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="animation-container">
+            <h3>🌊 水管流速動態模擬</h3>
+            <canvas id="flowCanvas"></canvas>
+            <div class="anim-info">
+                * 管徑粗細依推薦英吋比例動態對數縮放，防止超大管徑溢出畫布。<br>
+                * 氣泡移動速度與實際計算流速完全連動。
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 【只更新此對照表區塊】完全照手寫表格修改上限，並精確補齊 22", 26", 30", 34", 44" 
+const pipeTable = [
+    { inch: "3/8\"",   aSize: "10A",  innerDiaMm: 12.7,  maxLpm: 4.8 },
+    { inch: "1/2\"",   aSize: "15A",  innerDiaMm: 16.1,  maxLpm: 8.7 },
+    { inch: "3/4\"",   aSize: "20A",  innerDiaMm: 21.6,  maxLpm: 19 },
+    { inch: "1\"",     aSize: "25A",  innerDiaMm: 27.2,  maxLpm: 37 },
+    { inch: "1-1/4\"", aSize: "32A",  innerDiaMm: 35.9,  maxLpm: 70 },
+    { inch: "1-1/2\"", aSize: "40A",  innerDiaMm: 41.8,  maxLpm: 110 },
+    { inch: "2\"",     aSize: "50A",  innerDiaMm: 53.1,  maxLpm: 200 },
+    { inch: "2-1/2\"", aSize: "65A",  innerDiaMm: 67.9,  maxLpm: 400 },
+    { inch: "3\"",     aSize: "80A",  innerDiaMm: 80.7,  maxLpm: 600 },
+    { inch: "4\"",     aSize: "100A", innerDiaMm: 105.3, maxLpm: 1350 },
+    { inch: "5\"",     aSize: "125A", innerDiaMm: 130.8, maxLpm: 2100 },
+    { inch: "6\"",     aSize: "150A", innerDiaMm: 155.4, maxLpm: 2900 },
+    { inch: "8\"",     aSize: "200A", innerDiaMm: 204.7, maxLpm: 5000 },
+    { inch: "10\"",    aSize: "250A", innerDiaMm: 254.2, maxLpm: 7700 },
+    { inch: "12\"",    aSize: "300A", innerDiaMm: 304.7, maxLpm: 12000 },
+    { inch: "14\"",    aSize: "350A", innerDiaMm: 335.4, maxLpm: 16500 },
+    { inch: "16\"",    aSize: "400A", innerDiaMm: 387.4, maxLpm: 18000 },
+    { inch: "18\"",    aSize: "450A", innerDiaMm: 438.2, maxLpm: 23000 },
+    { inch: "20\"",    aSize: "500A", innerDiaMm: 488.8, maxLpm: 28500 },
+    { inch: "22\"",    aSize: "550A", innerDiaMm: 539.8, maxLpm: 34500 },
+    { inch: "24\"",    aSize: "600A", innerDiaMm: 590.6, maxLpm: 40500 },
+    { inch: "26\"",    aSize: "650A", innerDiaMm: 641.4, maxLpm: 47000 },
+    { inch: "28\"",    aSize: "700A", innerDiaMm: 692.2, maxLpm: 55000 },
+    { inch: "30\"",    aSize: "750A", innerDiaMm: 743.0, maxLpm: 64500 },
+    { inch: "32\"",    aSize: "800A", innerDiaMm: 793.8, maxLpm: 72000 },
+    { inch: "34\"",    aSize: "850A", innerDiaMm: 844.6, maxLpm: 83500 },
+    { inch: "36\"",    aSize: "900A", innerDiaMm: 895.4, maxLpm: 94000 },
+    { inch: "40\"",    aSize: "1000A",innerDiaMm: 996.2, maxLpm: 120000 },
+    { inch: "44\"",    aSize: "1100A",innerDiaMm: 1097.0,maxLpm: 150000 },
+    { inch: "48\"",    aSize: "1200A",innerDiaMm: 1197.8,maxLpm: 170000 }
+];
+
+// 以下程式碼完全不亂動，維持您底本的完整防卡死與動畫邏輯
+let canvas, ctx;
+let particles = [];
+let currentVelocity = 0; // m/s
+let currentPipeRadius = 20; // 繪圖半徑比例
+
+function init() {
+    canvas = document.getElementById('flowCanvas');
+    ctx = canvas.getContext('2d');
+    
+    // 嚴謹調整 Canvas 解析度與寬度防呆
+    const w = canvas.offsetWidth || 350;
+    const h = canvas.offsetHeight || 150;
+    canvas.width = w;
+    canvas.height = h;
+    
+    // 初始化氣泡，採百分比定位分配，絕不因寬度為0而死當
+    particles = [];
+    for (let i = 0; i < 45; i++) {
+        particles.push({
+            xRatio: Math.random(), // 儲存相對寬度比例
+            y: 0,
+            r: Math.random() * 2 + 1,
+            speedOffset: Math.random() * 0.4 + 0.8
+        });
+    }
+    
+    updateCalculation();
+    animate();
+}
+
+function addRow() {
+    const tbody = document.getElementById('device-tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" value="新設備" style="width:110px; padding:6px; border:1px solid #dadce0; border-radius:4px;"></td>
+        <td><input type="number" class="input-qty" value="1" min="0" oninput="updateCalculation()"></td>
+        <td><input type="number" class="input-lpm" value="10" min="0" oninput="updateCalculation()"></td>
+        <td class="row-subtotal">10.00</td>
+        <td><button class="btn-del" onclick="delRow(this)">刪除</button></td>
+    `;
+    tbody.appendChild(tr);
+    updateCalculation();
+}
+
+function delRow(btn) {
+    btn.closest('tr').remove();
+    updateCalculation();
+}
+
+function updateCalculation() {
+    let totalLpm = 0;
+    const rows = document.querySelectorAll('#device-tbody tr');
+    
+    rows.forEach(row => {
+        const qtyVal = parseFloat(row.querySelector('.input-qty').value);
+        const lpmVal = parseFloat(row.querySelector('.input-lpm').value);
+        
+        // 輸入框被倒退鍵清空時防呆設為 0，避免運算產生 NaN
+        const qty = isNaN(qtyVal) ? 0 : qtyVal;
+        const lpm = isNaN(lpmVal) ? 0 : lpmVal;
+        
+        const subtotal = qty * lpm;
+        row.querySelector('.row-subtotal').innerText = subtotal.toFixed(2);
+        totalLpm += subtotal;
+    });
+    
+    // 格式化總計顯示
+    document.getElementById('total-lpm-display').innerText = totalLpm.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " LPM";
+    
+    // 匹配對照表
+    let recommendedPipe = null;
+    if (totalLpm > 0) {
+        for (let i = 0; i < pipeTable.length; i++) {
+            if (totalLpm <= pipeTable[i].maxLpm) {
+                recommendedPipe = pipeTable[i];
+                break;
+            }
+        }
+        if (!recommendedPipe) {
+            recommendedPipe = pipeTable[pipeTable.length - 1];
+        }
+    }
+    
+    if (recommendedPipe && totalLpm > 0) {
+        // 計算流速 V = Q / A
+        const qCms = (totalLpm / 1000) / 60;
+        const innerDiaM = recommendedPipe.innerDiaMm / 1000;
+        const areaM2 = Math.PI * Math.pow((innerDiaM / 2), 2);
+        const velocity = qCms / areaM2;
+        
+        document.getElementById('res-dia-a').innerText = recommendedPipe.aSize;
+        document.getElementById('res-dia-b').innerText = recommendedPipe.inch;
+        document.getElementById('res-velocity').innerText = velocity.toFixed(2) + " m/s";
+        document.getElementById('res-max-limit').innerText = recommendedPipe.maxLpm.toLocaleString('en-US') + " LPM";
+        
+        currentVelocity = velocity;
+        
+        // 對數縮放公式：使 10A(12.7mm) 到 1200A(1197.8mm) 動態比例皆在 12px ~ 62px 之間，美觀不破版
+        let logScale = Math.log(recommendedPipe.innerDiaMm) / Math.log(1197.8);
+        currentPipeRadius = logScale * 50 + 12;
+    } else {
+        document.getElementById('res-dia-a').innerText = "-";
+        document.getElementById('res-dia-b').innerText = "-";
+        document.getElementById('res-velocity').innerText = "-";
+        document.getElementById('res-max-limit').innerText = "-";
+        currentVelocity = 0;
+        currentPipeRadius = 12;
+    }
+}
+
+// 繪製水流動畫
+function animate() {
+    if (!ctx || !canvas) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const centerY = canvas.height / 2;
+    const pipeHeight = currentPipeRadius * 2;
+    
+    // 1. 外水管外框壁陰影
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, centerY - currentPipeRadius - 4, canvas.width, pipeHeight + 8);
+    
+    // 2. 管內水體色
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(0, centerY - currentPipeRadius, canvas.width, pipeHeight);
+    
+    // 3. 流動氣泡
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    particles.forEach(p => {
+        // 動態計算當前 x 軸實體像素位置
+        let currentX = p.xRatio * canvas.width;
+        
+        // 速度與計算流速正比連動
+        currentX += (currentVelocity * 8 + 0.4) * p.speedOffset;
+        
+        // 循環邊界判定
+        if (currentX > canvas.width) {
+            currentX = 0;
+        }
+        p.xRatio = currentX / canvas.width; // 存回比例
+        
+        // 管徑變動時動態限縮氣泡高度範圍
+        const minY = centerY - currentPipeRadius + 4;
+        const maxY = centerY + currentPipeRadius - 4;
+        if (p.currentYBound !== pipeHeight) {
+            p.y = minY + Math.random() * (maxY - minY);
+            p.currentYBound = pipeHeight;
+        }
+        
+        ctx.beginPath();
+        ctx.arc(currentX, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    
+    // 4. 管壁線條
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, centerY - currentPipeRadius);
+    ctx.lineTo(canvas.width, centerY - currentPipeRadius);
+    ctx.moveTo(0, centerY + currentPipeRadius);
+    ctx.lineTo(canvas.width, centerY + currentPipeRadius);
+    ctx.stroke();
+    
+    requestAnimationFrame(animate);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
